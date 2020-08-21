@@ -10,11 +10,6 @@
       "check-space"
     ],
     "curly": true,
-     // doesn't seem to work yet...
-    // "curly": [
-    //   true,
-    //   "ignore-same-line"
-    // ],
     "eofline": true,
     "forin": true,
     "import-blacklist": [true],
@@ -32,8 +27,12 @@
     "member-access": false,
     "member-ordering": [
       true,
-      "static-before-instance",
-      "variables-before-functions"
+      {
+        "order": [
+          "static-before-instance",
+          "variables-before-functions"
+        ]
+      }
     ],
     "no-arg": true,
     "no-bitwise": true,
