@@ -99,8 +99,10 @@ export class ProjectComponent implements OnInit {
     }
 
   getStatusName(id: number) {
-      if (!this.milestoneStatuses) return '';
-      var status = this.milestoneStatuses.find(ms => ms.id == id);
+      if (!this.milestoneStatuses) {
+        return ''
+      };
+      var status = this.milestoneStatuses.find(ms => ms.id === id);
       return status ? status.name : 'unknown';
   }
 }
