@@ -41,7 +41,20 @@ export class AuthService {
             redirect_uri: `${Constants.clientRoot}signin-callback`,
             scope: 'openid profile projects-api',
             response_type: 'code',
-            post_logout_redirect_uri: `${Constants.clientRoot}signout-callback`
+            // post_logout_redirect_uri: `${Constants.clientRoot}signout-callback`,
+            // metadata needs to be used to correctly communication with Auth0.
+            // If Auth0 is not used as the STS, it is not needed.
+            metadata: {
+                issuer: `${Constants.stsAuthority}`,
+                // The "audience=projects-api" will allow the access token that gets returned to the user to be a JWT token.
+                // projects-api is the custom api created in Auth0.
+                authorization_endpoint: `${Constants.stsAuthority}authorize?audience=projects-api`,
+                jwks_uri: `${Constants.stsAuthority}.well-known/jwks.json`,
+                token_endpoint: `${Constants.stsAuthority}oauth/token`,
+                userinfo_endpoint: `${Constants.stsAuthority}userinfo`,
+                // tslint:disable-next-line: max-line-length
+                end_session_endpoint: `${Constants.stsAuthority}v2/logout?client_id=${Constants.clientId}&returnTo=${encodeURI(Constants.clientRoot)}signout-callback`
+              }
         };
         this._userManager = new UserManager(stsSettings);
     }
