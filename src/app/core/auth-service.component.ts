@@ -3,6 +3,8 @@ import { CoreModule } from './core.module';
 import { UserManager, User } from 'oidc-client';
 import { Constants } from '../constants';
 import { Subject } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { AuthContext } from '../model/auth-context';
 
 // AuthService will manage the overall security context for the application.
 
@@ -17,8 +19,10 @@ export class AuthService {
     private _loginChangedSubject = new Subject<boolean>();
 
     loginChanged = this._loginChangedSubject.asObservable();
+    // This authContext is used to determine what the user has access to.
+    authContext: AuthContext;
 
-    constructor() {
+    constructor(private _httpClient: HttpClient) {
         // stsSettings can contain a variety of settings related to the identity provider you will be connecting to.
         // NOTE: The identity provider for this app is IdentityServer4.
         // The first setting passed, authority, is the authority URL, which is typically the root URL for the identity provider.
@@ -42,6 +46,8 @@ export class AuthService {
             scope: 'openid profile projects-api',
             response_type: 'code',
             post_logout_redirect_uri: `${Constants.clientRoot}signout-callback`,
+            automaticSilentRenew: true,
+            silent_redirect_uri: `${Constants.clientRoot}assets/silent-callback.html`
             // metadata needs to be used to correctly communication with Auth0.
             // If Auth0 is not used as the STS, it is not needed.
             /*metadata: {
@@ -57,6 +63,17 @@ export class AuthService {
               }*/
         };
         this._userManager = new UserManager(stsSettings);
+        // If a user's access token expires, this will set the login status to be false, making the page look as if you were logged out.
+        this._userManager.events.addAccessTokenExpired(valueNotUsed => {
+            this._loginChangedSubject.next(false);
+          });
+        this._userManager.events.addUserLoaded(user => {
+            if (this._user !== user) {
+              this._user = user;
+              this.loadSecurityContext();
+              this._loginChangedSubject.next(!!user && !user.expired);
+            }
+          });
     }
 
     // The method will redirect the user to the STS login screen (signinRedirect() returns a Promise).
@@ -79,6 +96,9 @@ export class AuthService {
             if(this._user !== user) {
                 this._loginChangedSubject.next(userCurrent);
             }
+            if (userCurrent && !this.authContext) {
+                this.loadSecurityContext();
+            }
             this._user = user;
             return userCurrent;
         });
@@ -96,6 +116,7 @@ export class AuthService {
 
     completeLogout() {
         this._user = null;
+        this._loginChangedSubject.next(false);
         return this._userManager.signoutRedirectCallback();
     }
 
@@ -112,4 +133,18 @@ export class AuthService {
                 }
             })
     }
+
+    // This is used to grab the AuthService context from the STS server.
+    loadSecurityContext() {
+        this._httpClient
+          .get<AuthContext>(`${Constants.apiRoot}Projects/AuthContext`)
+          .subscribe(
+            context => {
+              this.authContext = new AuthContext();
+              this.authContext.claims = context.claims;
+              this.authContext.userProfile = context.userProfile;
+            },
+            error => console.error(error)
+          );
+      }
 }

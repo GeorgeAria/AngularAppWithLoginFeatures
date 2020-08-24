@@ -32,4 +32,8 @@ export class AppComponent implements OnInit {
   logout() {
     this._authService.logout();
   }
+
+  isAdmin() {
+    return this._authService.authContext && this._authService.authContext.isAdmin;
+  }
 }
