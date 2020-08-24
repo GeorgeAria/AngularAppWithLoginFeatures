@@ -6,7 +6,7 @@ import { Subject } from 'rxjs';
 
 // AuthService will manage the overall security context for the application.
 
-@Injectable({providedIn: CoreModule})
+@Injectable()
 export class AuthService {
     // UserManager manages all the low-level details of OpenID Connect flows for you.
 	// User encapsulates the client-side information about a signed-in user A (i.e. ID and access tokens 
@@ -41,10 +41,10 @@ export class AuthService {
             redirect_uri: `${Constants.clientRoot}signin-callback`,
             scope: 'openid profile projects-api',
             response_type: 'code',
-            // post_logout_redirect_uri: `${Constants.clientRoot}signout-callback`,
+            post_logout_redirect_uri: `${Constants.clientRoot}signout-callback`,
             // metadata needs to be used to correctly communication with Auth0.
             // If Auth0 is not used as the STS, it is not needed.
-            metadata: {
+            /*metadata: {
                 issuer: `${Constants.stsAuthority}`,
                 // The "audience=projects-api" will allow the access token that gets returned to the user to be a JWT token.
                 // projects-api is the custom api created in Auth0.
@@ -54,7 +54,7 @@ export class AuthService {
                 userinfo_endpoint: `${Constants.stsAuthority}userinfo`,
                 // tslint:disable-next-line: max-line-length
                 end_session_endpoint: `${Constants.stsAuthority}v2/logout?client_id=${Constants.clientId}&returnTo=${encodeURI(Constants.clientRoot)}signout-callback`
-              }
+              }*/
         };
         this._userManager = new UserManager(stsSettings);
     }
@@ -97,5 +97,19 @@ export class AuthService {
     completeLogout() {
         this._user = null;
         return this._userManager.signoutRedirectCallback();
+    }
+
+    // This method returns the access token of a currently logged in user.
+    // This will be used to make API calls. Otherwise, the API can not be used.
+    getAccessToken() {
+        return this._userManager.getUser()
+            .then(user => {
+                if (!!user && !user.expired) {
+                    return user.access_token;
+                }
+                else {
+                    return null;
+                }
+            })
     }
 }
